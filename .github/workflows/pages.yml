@@ -25,6 +25,10 @@ jobs:
           node-version: 22
       - name: Instalar dependencias
         run: npm install
+      - name: Preparar miniatura social de La Forja
+        run: |
+          base64 --decode public/social/la-forja.png.base64 > public/social/la-forja.png
+          test "$(file -b --mime-type public/social/la-forja.png)" = "image/png"
       - name: Compilar para el dominio propio
         env:
           PUBLIC_LA_FORJA_REV: ${{ github.sha }}
