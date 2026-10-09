@@ -1,0 +1,121 @@
+---
+import '../styles/global.css';
+import { getCollection } from 'astro:content';
+interface Props{
+  title?:string;description?:string;active?:string;image?:string;
+  type?:'website'|'article';publishedTime?:Date;author?:string;noindex?:boolean;
+}
+const {
+  title='La Forja',
+  description='Revista digital independiente de opinión, pensamiento crítico, ensayo y educación popular.',
+  active='',image,type='website',publishedTime,author,noindex=false
+}=Astro.props;
+const base=import.meta.env.BASE_URL;
+// Cada build obtiene su propio identificador para evitar navegar a HTML obsoleto.
+const releaseId=import.meta.env.PUBLIC_LA_FORJA_REV || '20261008-auditoria';
+const pageTitle=title==='La Forja'?title:title+' — La Forja';
+const canonical=new URL(Astro.url.pathname,Astro.site);
+const socialImage=new URL(image ? (image.startsWith('/')?base+image.replace(/^\//,''):image) : base+'social/default.svg',Astro.site);
+const rssUrl=new URL(base+'rss.xml',Astro.site);
+const articulos=await getCollection('articulos',({data})=>!data.draft);
+const hayColumnas=articulos.some(a=>a.data.type==='columna');
+const hayEnsayos=articulos.some(a=>a.data.type==='ensayo');
+const hayArticulos=articulos.length>0;
+const issues=(await getCollection('numeros',({data})=>!data.draft&&data.status==='actual')).sort((a,b)=>b.data.date.valueOf()-a.data.date.valueOf());
+const current=issues[0];
+const roman=['','I','II','III','IV','V','VI','VII','VIII','IX','X'];
+const yearLabel=current ? (roman[current.data.year]??String(current.data.year)) : '';
+const nav=[
+  ['Portada',''],
+  ...(hayColumnas?[['Columnas','columnas/']]:[]),
+  ...(hayEnsayos?[['Ensayos','ensayos/']]:[]),
+  ['Cuadernos populares','educacion-popular/'],
+  ...(current?[['Archivo','archivo/']]:[]),
+  ...(hayArticulos?[['Temas','temas/'],['Buscar','buscar/']]:[]),
+  ['Sobre La Forja','sobre/']
+];
+---
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta name="description" content={description}/>
+  <meta name="theme-color" content="#e8ddc4"/>
+  <meta name="la-forja-version" content={releaseId.slice(0,12)}/>
+  {noindex && <meta name="robots" content="noindex,nofollow,noarchive"/>}
+  <link rel="canonical" href={canonical}/>
+  {hayArticulos && <link rel="alternate" type="application/rss+xml" title="La Forja" href={rssUrl}/>}
+  <meta property="og:site_name" content="La Forja"/>
+  <meta property="og:locale" content="es_CL"/>
+  <meta property="og:type" content={type}/>
+  <meta property="og:title" content={pageTitle}/>
+  <meta property="og:description" content={description}/>
+  <meta property="og:url" content={canonical}/>
+  <meta property="og:image" content={socialImage}/>
+  <meta name="twitter:card" content="summary_large_image"/>
+  <meta name="twitter:title" content={pageTitle}/>
+  <meta name="twitter:description" content={description}/>
+  <meta name="twitter:image" content={socialImage}/>
+  {publishedTime && <meta property="article:published_time" content={publishedTime.toISOString()}/>}
+  {author && <meta name="author" content={author}/>}
+  <title>{pageTitle}</title>
+</head>
+<body class="page-enter">
+  <main class="shell">
+    <div class="topline">
+      {current
+        ? <><span>Año {yearLabel} · N.º {current.data.number} · Santiago de Chile</span><span>{current.data.month}</span></>
+        : <><span>Primera convocatoria editorial · Santiago de Chile</span><span>Edición inaugural en preparación</span></>}
+    </div>
+    <header class="mast">
+      <a class="logo ink-title" href={base}>La Forja</a>
+      <div class="mast-side">
+        <div class="mast-note">Opinión<br/>Pensamiento crítico<br/>Ensayo<br/>Educación popular</div>
+        <a class="mast-submit" href={base+'colabora/'}>
+          <span>Convocatoria editorial</span>
+          <strong>Publica con nosotros →</strong>
+        </a>
+      </div>
+    </header>
+    <nav class="nav">
+      {nav.map(([label,path])=><a class:list={{active:active===label}} href={base+path}>{label}</a>)}
+      <a class="nav-submit" href={base+'colabora/'}>Publica con nosotros</a>
+    </nav>
+    <slot/>
+    <footer>
+      <span>La Forja · Santiago de Chile · 2026</span>
+      <span><a href={base+'sobre/'}>Sobre La Forja</a> · <a href={base+'educacion-popular/'}>Cuadernos populares</a>{hayArticulos && <> · <a href={base+'autores/'}>Autores</a> · <a href={base+'temas/'}>Temas</a> · <a href={base+'buscar/'}>Buscar</a> · <a href={rssUrl}>RSS</a></>} · <a class="footer-submit" href={base+'colabora/'}>Publica con nosotros</a> · <a href="mailto:revistalaforja@gmail.com" aria-label="Correo editorial de La Forja">Correo editorial</a> · <a class="footer-instagram" href="https://www.instagram.com/la_forja.revista/" target="_blank" rel="noopener noreferrer" aria-label="Instagram de La Forja, @la_forja.revista"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3.6" y="3.6" width="16.8" height="16.8" rx="4.1"/><circle cx="12" cy="12" r="3.85"/><circle class="ig-dot" cx="17.15" cy="6.85" r="1.05"/></svg><span>@la_forja.revista</span></a></span>
+    </footer>
+  </main>
+  <script is:inline define:vars={{releaseId}}>
+    (() => {
+      // GitHub Pages y el navegador pueden conservar HTML de ediciones anteriores.
+      // Versionamos TODOS los enlaces internos visibles, incluyendo los del contenido.
+      const revision=String(releaseId).slice(0,12);
+      for(const link of document.querySelectorAll('a[href^="/"]')){
+        const original=link.getAttribute('href');
+        if(!original || original.startsWith('//'))continue;
+        const url=new URL(original,window.location.href);
+        if(url.origin!==window.location.origin)continue;
+        url.searchParams.set('lfv',revision);
+        link.setAttribute('href',url.pathname+url.search+url.hash);
+      }
+      const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (reduce) return;
+      document.addEventListener('click', (event) => {
+        const a = event.target.closest('a');
+        if (!a || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+        if (a.target === '_blank' || a.hasAttribute('download')) return;
+        const href = a.getAttribute('href');
+        if (!href || href.startsWith('#') || href.startsWith('mailto:') || href.startsWith('tel:')) return;
+        const url = new URL(a.href, window.location.href);
+        if (url.origin !== window.location.origin) return;
+        event.preventDefault();
+        document.body.classList.add('page-leave');
+        window.setTimeout(() => { window.location.href = url.href; }, 115);
+      });
+    })();
+  </script>
+</body>
+</html>

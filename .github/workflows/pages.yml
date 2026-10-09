@@ -1,0 +1,52 @@
+name: La Forja · publicar sitio
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: la-forja-pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Compilar y auditar
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar código
+        uses: actions/checkout@v4
+      - name: Preparar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Instalar dependencias
+        run: npm install
+      - name: Compilar para el dominio propio
+        env:
+          PUBLIC_LA_FORJA_REV: ${{ github.sha }}
+        run: npm run build
+      - name: Auditar archivos
+        run: node scripts/audit-public.mjs
+      - name: Subir sitio para GitHub Pages
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: ./dist
+  deploy:
+    name: Desplegar sitio
+    runs-on: ubuntu-latest
+    needs: build
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    steps:
+      - name: Publicar
+        id: deployment
+        uses: actions/deploy-pages@v4
