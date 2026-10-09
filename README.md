@@ -38,3 +38,12 @@ node scripts/audit-public.mjs
 ```
 
 No guardar en GitHub contraseñas ni tokens privados. Los secretos para notificaciones pertenecen a Supabase Vault / Apps Script, como describe `automation/README.md`.
+
+## Identidad gráfica · logo miniatura
+
+El monograma **LF** (cuadrado rojo editorial, letras color papel, textura de anillos concéntricos) es el distintivo reducido oficial de la revista. Se conserva como dibujo vectorial SVG en:
+
+- `public/branding/lf-mini.svg`: archivo maestro editable de la versión miniatura.
+- `public/favicon.svg`: copia destinada a la pestaña del navegador.
+
+El layout `src/layouts/BaseLayout.astro` inserta automáticamente el favicon en todas las páginas y añade una versión de caché asociada al despliegue para que los navegadores lo renueven después de publicar cambios.

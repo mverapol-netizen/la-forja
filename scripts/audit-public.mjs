@@ -78,6 +78,11 @@ assert(form.includes('700 a 1.200') && form.includes('5.000') && form.includes('
 assert(admin.includes('id="admin-login-form" onsubmit="return false"') && admin.includes('ensureSession().then(ok=>'),
   'El panel editorial no conserva la corrección de inicio de sesión');
 assert(fs.existsSync(path.join(dist,'sitemap.xml')),'Falta sitemap');
+assert(fs.existsSync(path.join(dist,'favicon.svg')),'Falta favicon vectorial');
+assert(fs.existsSync(path.join(dist,'branding/lf-mini.svg')),'Falta logo miniatura en la identidad de marca');
+for(const page of htmlFiles){
+  assert(load(page).includes('rel="icon" type="image/svg+xml" href="/favicon.svg?v='),'Falta favicon en '+page);
+}
 assert(fs.existsSync(path.join(dist,'CNAME')),'Falta el dominio personalizado');
 if(fs.existsSync(path.join(dist,'CNAME')))assert(load('CNAME').trim()==='revistalaforja.cl','CNAME incorrecto');
 assert(fs.existsSync(path.join(dist,'robots.txt'))&&load('robots.txt').includes('https://revistalaforja.cl/sitemap.xml'),'robots.txt no usa dominio propio');
