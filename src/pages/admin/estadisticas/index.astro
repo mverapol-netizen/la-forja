@@ -1,0 +1,308 @@
+---
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import {getCollection} from 'astro:content';
+const supabaseUrl='https://jtgoumydocaleucuomaw.supabase.co';
+const supabaseKey='sb_publishable_jHVTZ5v1aeP82CxMg33r6g_S3C_yG9H';
+const articles=await getCollection('articulos',({data})=>!data.draft);
+const authors=await getCollection('autores',({data})=>!data.draft);
+const catalog=articles.filter(a=>['ensayo','columna'].includes(a.data.type)).map(a=>({
+  slug:a.id,kind:a.data.type,title:a.data.title,
+  author:authors.find(b=>b.id===a.data.author)?.data.name??a.data.author,
+  date:a.data.date.toISOString().slice(0,10),
+  featured:!!a.data.featured,
+  url:new URL((a.data.type==='ensayo'?'ensayos/':'columnas/')+a.id+'/',Astro.site).toString()
+}));
+---
+<BaseLayout title="Estadísticas editoriales" noindex>
+  <main class="metrics-shell">
+    <header class="metrics-head">
+      <div>
+        <span class="label blue">Uso interno · Redacción</span>
+        <h1>Estadísticas de lectura</h1>
+        <p>Audiencia de ensayos y columnas para apoyar la selección de destacados del mes.</p>
+      </div>
+      <a class="metrics-back" href="/admin/">← Volver al panel editorial</a>
+    </header>
+
+    <section id="metrics-login" class="metrics-login">
+      <h2>Acceso administrativo</h2>
+      <p>Estas estadísticas son privadas. Inicia sesión en el panel editorial con una cuenta autorizada y vuelve a esta sección.</p>
+      <a href="/admin/" class="metrics-action">Ir al inicio de sesión →</a>
+    </section>
+
+    <section id="metrics-app" hidden>
+      <div class="metrics-toolbar">
+        <label>Mes de referencia <input id="metrics-month" type="month" aria-label="Elegir mes de referencia" /></label>
+        <label>Tipo de publicación
+          <select id="metrics-kind" aria-label="Filtrar por tipo de texto">
+            <option value="all">Ensayos y columnas</option>
+            <option value="ensayo">Solo ensayos</option>
+            <option value="columna">Solo columnas</option>
+          </select>
+        </label>
+        <button type="button" id="metrics-refresh">Actualizar datos</button>
+        <button type="button" id="metrics-export">Exportar CSV</button>
+      </div>
+
+      <p class="metrics-disclaimer">Se cuentan lecturas registradas por publicación desde que se activó este sistema. No son personas únicas: las recargas en una misma pestaña y día se deduplican. No guardamos direcciones IP, nombres ni identificadores de lectores. Estas cifras son orientativas.</p>
+      <p id="metrics-status" role="status" aria-live="polite"></p>
+      <section class="metrics-scorecards" aria-label="Indicadores del mes">
+        <article><span>Lecturas registradas</span><strong id="metrics-total">—</strong></article>
+        <article><span>Publicaciones leídas</span><strong id="metrics-active">—</strong></article>
+        <article><span>Cambio frente al mes anterior</span><strong id="metrics-change">—</strong></article>
+      </section>
+
+      <div class="metrics-layout">
+        <section aria-labelledby="metrics-rank-title">
+          <h2 id="metrics-rank-title">Ranking mensual</h2>
+          <div class="metrics-table-scroll">
+            <table class="metrics-ranking">
+              <thead><tr><th scope="col">Publicación</th><th scope="col">Lecturas</th><th scope="col">Acción</th></tr></thead>
+              <tbody id="metrics-rows"></tbody>
+            </table>
+          </div>
+          <p id="metrics-candidates" class="metrics-explainer"></p>
+        </section>
+        <section aria-labelledby="metrics-trend-title">
+          <h2 id="metrics-trend-title">Evolución diaria</h2>
+          <label class="metrics-article-picker">Texto
+            <select id="metrics-article"><option value="all">Todas las publicaciones</option></select>
+          </label>
+          <div id="metrics-chart" class="metrics-chart" role="img" aria-label="Lecturas por día durante el mes"></div>
+          <p class="metrics-explainer">Pasa el cursor o enfoca una barra para consultar el valor. Filtra por texto para comparar su evolución durante el mes.</p>
+        </section>
+      </div>
+      <p class="metrics-footnote">Los primeros puestos son candidatos para revisión editorial, no una selección automática. El equipo decide los destacados y los publica mediante la configuración editorial de cada artículo.</p>
+    </section>
+  </main>
+
+  <script define:vars={{supabaseUrl,supabaseKey,catalog}}>
+    const STORE='laforja_editorial_session_v1';
+    const login=document.getElementById('metrics-login');
+    const app=document.getElementById('metrics-app');
+    const monthInput=document.getElementById('metrics-month');
+    const kindInput=document.getElementById('metrics-kind');
+    const articleInput=document.getElementById('metrics-article');
+    const status=document.getElementById('metrics-status');
+    const formatter=new Intl.NumberFormat('es-CL');
+    const contentMap=new Map(catalog.map(a=>[a.kind+':'+a.slug,a]));
+    let monthly=[],previous=[],daily=[],visibleArticles=[];
+    const currentMonth=()=>new Intl.DateTimeFormat('sv-SE',{timeZone:'America/Santiago',year:'numeric',month:'2-digit'}).format(new Date());
+    function shiftMonth(value,offset){
+      const parts=value.split('-').map(Number);
+      return new Date(Date.UTC(parts[0],parts[1]-1+offset,1)).toISOString().slice(0,7);
+    }
+    function isAdmin(session){
+      const email=String(session?.user?.email||'').toLowerCase();
+      return ['mvera.pol@gmail.com','revistalaforja@gmail.com'].includes(email);
+    }
+    function jwtExp(token){
+      try{return JSON.parse(atob(token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))).exp||0}catch{return 0}
+    }
+    async function validSession(){
+      let session;
+      try{session=JSON.parse(localStorage.getItem(STORE)||'null')}catch{return null}
+      if(!session?.access_token||!isAdmin(session))return null;
+      if(jwtExp(session.access_token)>=Math.floor(Date.now()/1000)+75)return session;
+      if(!session.refresh_token)return null;
+      const res=await fetch(supabaseUrl+'/auth/v1/token?grant_type=refresh_token',{
+        method:'POST',headers:{apikey:supabaseKey,'Content-Type':'application/json'},
+        body:JSON.stringify({refresh_token:session.refresh_token})
+      });
+      if(!res.ok)return null;
+      const refreshed=await res.json();
+      if(!isAdmin(refreshed))return null;
+      localStorage.setItem(STORE,JSON.stringify(refreshed));
+      return refreshed;
+    }
+    async function query(path,token){
+      const res=await fetch(supabaseUrl+'/rest/v1/'+path,{
+        headers:{apikey:supabaseKey,Authorization:'Bearer '+token,'Accept':'application/json'}
+      });
+      if(!res.ok)throw Error('Acceso rechazado ('+res.status+')');
+      return res.json();
+    }
+    const keyFor=a=>a.kind+':'+a.slug;
+    const keyRow=r=>r.kind+':'+r.article_slug;
+    const amount=r=>Number(r?.views||0);
+    const selectedType=a=>kindInput.value==='all'||a.kind===kindInput.value;
+    function sumFor(data){
+      return data.reduce((sum,row)=>{
+        const a=contentMap.get(keyRow(row));
+        return sum+(a&&selectedType(a)?amount(row):0);
+      },0);
+    }
+    function buildChart(){
+      const chart=document.getElementById('metrics-chart');
+      chart.replaceChildren();
+      const selected=articleInput.value;
+      const month=monthInput.value;
+      const parts=month.split('-').map(Number);
+      const days=new Date(Date.UTC(parts[0],parts[1],0)).getUTCDate();
+      const totals=new Map();
+      for(const row of daily){
+        const a=contentMap.get(keyRow(row));
+        if(!a||!selectedType(a)||(selected!=='all'&&keyFor(a)!==selected))continue;
+        totals.set(row.viewed_on,(totals.get(row.viewed_on)||0)+amount(row));
+      }
+      const maximum=Math.max(1,...totals.values());
+      let sum=0;
+      for(let day=1;day<=days;day++){
+        const date=month+'-'+String(day).padStart(2,'0');
+        const n=totals.get(date)||0;sum+=n;
+        const cell=document.createElement('div');
+        cell.className='metrics-chart-day';cell.tabIndex=0;
+        cell.title=date+': '+n+' lecturas';
+        cell.setAttribute('aria-label',date+': '+n+' lecturas');
+        const bar=document.createElement('div');
+        bar.className='metrics-chart-bar';
+        if(!n)bar.classList.add('empty');
+        bar.style.height=(n?Math.max(5,Math.round(n/maximum*100)):2)+'%';
+        const label=document.createElement('small');
+        label.textContent=(day===1||day%5===0||day===days)?String(day):'';
+        cell.append(bar,label);chart.append(cell);
+      }
+      chart.setAttribute('aria-label',formatter.format(sum)+' lecturas durante '+month+' en el filtro seleccionado');
+    }
+    function render(){
+      const current=new Map(monthly.map(r=>[keyRow(r),amount(r)]));
+      visibleArticles=catalog.filter(selectedType).map(a=>({
+        ...a,views:current.get(keyFor(a))||0
+      })).sort((a,b)=>b.views-a.views||b.date.localeCompare(a.date));
+      const count=visibleArticles.reduce((s,a)=>s+a.views,0);
+      const prev=sumFor(previous);
+      document.getElementById('metrics-total').textContent=formatter.format(count);
+      document.getElementById('metrics-active').textContent=formatter.format(visibleArticles.filter(a=>a.views>0).length);
+      document.getElementById('metrics-change').textContent=prev
+        ?((count-prev)>0?'+':'')+Math.round((count-prev)/prev*100)+' %'
+        :'Sin base previa';
+      const tbody=document.getElementById('metrics-rows');
+      tbody.replaceChildren();
+      if(!visibleArticles.length){
+        const tr=document.createElement('tr'),td=document.createElement('td');
+        td.colSpan=3;td.textContent='No hay publicaciones en esta categoría.';tr.append(td);tbody.append(tr);
+      }
+      visibleArticles.forEach((a,i)=>{
+        const tr=document.createElement('tr');
+        const name=document.createElement('td');
+        const rank=document.createElement('span');rank.className='metrics-number';rank.textContent=String(i+1).padStart(2,'0')+' / ';
+        const link=document.createElement('a');link.href=a.url;link.target='_blank';link.rel='noopener noreferrer';link.textContent=a.title;
+        const meta=document.createElement('small');meta.textContent=a.author+' · '+(a.kind==='ensayo'?'Ensayo':'Columna')+(a.featured?' · En portada':'');
+        name.append(rank,link,meta);
+        const amount=document.createElement('td');amount.className='metrics-row-count';amount.textContent=formatter.format(a.views);
+        const action=document.createElement('td');
+        const button=document.createElement('button');button.type='button';button.textContent='Ver tendencia';
+        button.addEventListener('click',()=>{
+          articleInput.value=keyFor(a);buildChart();
+          document.getElementById('metrics-trend-title').scrollIntoView({behavior:'smooth',block:'start'});
+        });
+        action.append(button);tr.append(name,amount,action);tbody.append(tr);
+      });
+      const best=visibleArticles.filter(a=>a.views>0).slice(0,3);
+      document.getElementById('metrics-candidates').textContent=best.length
+        ?'Candidatos a destacados de '+monthInput.value+': '+best.map(a=>a.title+' ('+formatter.format(a.views)+')').join(' · ')+'.'
+        :'Sin lecturas registradas en este periodo. No hay suficientes datos para un ranking significativo.';
+      const oldValue=articleInput.value;
+      articleInput.replaceChildren();
+      const defaultOption=document.createElement('option');
+      defaultOption.value='all';defaultOption.textContent='Todas las publicaciones';articleInput.append(defaultOption);
+      for(const a of visibleArticles){
+        const opt=document.createElement('option');opt.value=keyFor(a);opt.textContent=a.title;articleInput.append(opt);
+      }
+      articleInput.value=visibleArticles.some(a=>keyFor(a)===oldValue)?oldValue:'all';
+      buildChart();
+    }
+    async function reload(){
+      const chosen=monthInput.value;
+      if(!/^\d{4}-\d{2}$/.test(chosen))return;
+      const refresh=document.getElementById('metrics-refresh');
+      refresh.disabled=true;status.textContent='Consultando lecturas…';
+      try{
+        const session=await validSession();
+        if(!session){app.hidden=true;login.hidden=false;return;}
+        const last=shiftMonth(chosen,-1),next=shiftMonth(chosen,1);
+        const base='editorial_monthly_readership?select=month,article_slug,kind,views&month=eq.';
+        const values=await Promise.all([
+          query(base+chosen+'&limit=5000',session.access_token),
+          query(base+last+'&limit=5000',session.access_token),
+          query('editorial_daily_readership?select=viewed_on,article_slug,kind,views&viewed_on=gte.'+chosen+'-01&viewed_on=lt.'+next+'-01&limit=10000',session.access_token)
+        ]);
+        [monthly,previous,daily]=values;
+        render();
+        status.textContent='Información actualizada para '+chosen+'.';
+      }catch(err){
+        status.textContent='No se pudieron obtener los datos. Revisa la conexión o los permisos del equipo editorial.';
+      }finally{refresh.disabled=false;}
+    }
+    monthInput.value=currentMonth();
+    monthInput.max=currentMonth();
+    monthInput.addEventListener('change',reload);
+    kindInput.addEventListener('change',render);
+    articleInput.addEventListener('change',buildChart);
+    document.getElementById('metrics-refresh').addEventListener('click',reload);
+    document.getElementById('metrics-export').addEventListener('click',()=>{
+      const month=monthInput.value;
+      const quote=s=>'"'+String(s).replace(/"/g,'""')+'"';
+      const lines=[['Mes','Tipo','Título','Autor','Lecturas','URL'].join(',')].concat(
+        visibleArticles.map(a=>[month,a.kind,a.title,a.author,a.views,a.url].map(quote).join(','))
+      );
+      const blob=new Blob(['\uFEFF'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'});
+      const href=URL.createObjectURL(blob);
+      const a=document.createElement('a');
+      a.href=href;a.download='la-forja-lecturas-'+month+'.csv';document.body.appendChild(a);a.click();a.remove();
+      setTimeout(()=>URL.revokeObjectURL(href),1000);
+    });
+    validSession().then(session=>{
+      if(!session){login.hidden=false;app.hidden=true;return;}
+      login.hidden=true;app.hidden=false;reload();
+    }).catch(()=>{login.hidden=false;app.hidden=true;});
+  </script>
+</BaseLayout>
+
+<style>
+  .metrics-shell{padding:25px 0 70px}
+  .metrics-head{display:flex;align-items:end;justify-content:space-between;gap:20px;border-bottom:4px solid var(--red);padding-bottom:20px}
+  .metrics-head h1{font:400 clamp(40px,5.5vw,77px)/.9 var(--display);letter-spacing:-.04em;text-transform:uppercase;margin:12px 0}
+  .metrics-head p{font:600 20px/1.25 var(--serif);max-width:780px;margin:0}
+  .metrics-back{font:700 13px var(--sans);text-transform:uppercase;white-space:nowrap;border-bottom:2px solid var(--red);padding-bottom:4px}
+  .metrics-login{max-width:700px;margin:35px auto;padding:25px;border:2px solid var(--rule)}
+  .metrics-login h2{font:700 32px var(--serif);margin:0}
+  .metrics-login p{font-size:18px;line-height:1.4}
+  .metrics-action{display:inline-block;padding:12px 18px;background:var(--red);color:var(--paper);font:700 13px var(--sans);text-transform:uppercase}
+  .metrics-toolbar{display:flex;align-items:end;flex-wrap:wrap;gap:9px;padding:20px 0}
+  .metrics-toolbar label,.metrics-article-picker{display:grid;gap:5px;font:700 12px var(--sans);text-transform:uppercase}
+  .metrics-toolbar input,.metrics-toolbar select,.metrics-toolbar button,.metrics-article-picker select{border:1px solid var(--rule);border-radius:0;background:var(--paper);color:var(--ink);min-height:42px;padding:9px;font:700 12px var(--sans)}
+  .metrics-toolbar button{background:var(--blue);color:var(--paper);cursor:pointer}
+  .metrics-toolbar button:disabled{opacity:.6;cursor:wait}
+  .metrics-disclaimer{max-width:950px;color:var(--ink-soft);font:600 14px/1.4 var(--serif);margin:0 0 12px}
+  #metrics-status{font:700 12px var(--sans);color:var(--blue);margin:10px 0}
+  .metrics-scorecards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border:1px solid var(--rule);margin:17px 0 30px}
+  .metrics-scorecards article{padding:18px;border-right:1px solid var(--rule)}
+  .metrics-scorecards article:last-child{border-right:0}
+  .metrics-scorecards span{display:block;font:700 12px var(--sans);text-transform:uppercase;color:var(--blue)}
+  .metrics-scorecards strong{display:block;font:400 clamp(31px,4vw,52px)/1.15 var(--display);margin-top:10px}
+  .metrics-layout{display:grid;grid-template-columns:1.08fr 1fr;gap:32px}
+  .metrics-layout h2{font:700 30px/1 var(--serif);margin:0 0 16px}
+  .metrics-table-scroll{overflow-x:auto}
+  .metrics-ranking{width:100%;border-collapse:collapse}
+  .metrics-ranking th{text-align:left;border-bottom:2px solid var(--rule);padding:10px 6px;font:700 12px var(--sans);text-transform:uppercase}
+  .metrics-ranking td{padding:13px 6px;border-bottom:1px solid rgba(48,43,37,.4);vertical-align:top}
+  .metrics-ranking td a{font:700 17px/1.2 var(--serif);text-decoration:underline;text-decoration-color:var(--red);text-underline-offset:3px}
+  .metrics-ranking td small{display:block;margin:6px 0 0 29px;font:600 12px var(--sans);color:var(--ink-soft)}
+  .metrics-number{font:700 12px var(--sans);color:var(--red);margin-right:5px}
+  .metrics-ranking .metrics-row-count{font:400 25px var(--display);text-align:center}
+  .metrics-ranking button{background:transparent;border:1px solid var(--blue);padding:6px;font:700 11px var(--sans);text-transform:uppercase;cursor:pointer}
+  .metrics-ranking button:hover{background:var(--blue);color:var(--paper)}
+  .metrics-article-picker select{max-width:100%;text-transform:none;margin:5px 0 18px}
+  .metrics-chart{height:268px;display:flex;align-items:end;gap:3px;border-bottom:2px solid var(--rule);border-left:1px solid var(--rule);padding:10px 3px 0;background:repeating-linear-gradient(to top, transparent 0 62px,rgba(48,43,37,.09) 63px)}
+  .metrics-chart-day{height:100%;min-width:0;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;cursor:help;outline-offset:2px}
+  .metrics-chart-bar{width:100%;min-height:2px;background:var(--blue)}
+  .metrics-chart-bar.empty{background:rgba(48,43,37,.16)}
+  .metrics-chart-day:is(:hover,:focus) .metrics-chart-bar{background:var(--red)}
+  .metrics-chart-day small{display:block;height:15px;margin-top:5px;color:var(--ink-soft);font:700 9px var(--sans)}
+  .metrics-explainer{font:600 14px/1.4 var(--serif);color:var(--ink-soft);margin-top:15px}
+  .metrics-footnote{margin-top:30px;padding:14px 0;border-top:1px solid var(--rule);font:600 14px/1.4 var(--serif)}
+  [hidden]{display:none!important}
+  @media(max-width:990px){.metrics-layout{grid-template-columns:1fr}.metrics-head{display:block}.metrics-back{display:inline-block;margin-top:16px}}
+  @media(max-width:600px){.metrics-scorecards{grid-template-columns:1fr}.metrics-scorecards article{border-right:0;border-bottom:1px solid var(--rule)}.metrics-scorecards article:last-child{border-bottom:0}.metrics-head h1{font-size:46px}.metrics-ranking td{padding:9px 3px}.metrics-toolbar label{width:100%}}
+</style>
