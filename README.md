@@ -47,3 +47,12 @@ El monograma **LF** (cuadrado rojo editorial, letras color papel, textura de ani
 - `public/favicon.svg`: copia destinada a la pestaña del navegador.
 
 El layout `src/layouts/BaseLayout.astro` inserta automáticamente el favicon en todas las páginas y añade una versión de caché asociada al despliegue para que los navegadores lo renueven después de publicar cambios.
+
+
+## Estadísticas editoriales
+
+El sitio registra lecturas anónimas de ensayos y columnas en Supabase. No almacena direcciones IP, nombres, identificadores de lectores ni agentes de usuario; únicamente un registro con el artículo y la fecha en Chile. El navegador contabiliza un máximo de una lectura por artículo, pestaña y día; se respetan Do Not Track y Global Privacy Control cuando el navegador lo informa. Son cifras orientativas, no personas únicas ni métricas a prueba de tráfico automatizado.
+
+Desde el panel existente **/admin/** se accede a **/admin/estadisticas/**. Tras iniciar sesión con una cuenta editorial autorizada se pueden filtrar los datos por mes y formato, consultar el ranking, ver la evolución diaria y exportar CSV. Los resúmenes están protegidos por autenticación y reglas de seguridad de filas (RLS); no son públicos. La selección de destacados sigue siendo una decisión editorial y se controla con el atributo de artículo \`featured\` en GitHub. El esquema está documentado en \`automation/analytics-readership.sql\`.
+
+La recopilación comenzó al desplegar el contador en octubre de 2026; no hay datos históricos anteriores.
