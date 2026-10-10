@@ -1,0 +1,145 @@
+---
+interface Props{title:string;url:string;author:string;kind:'ensayo'|'columna'}
+const {title,url,author,kind}=Astro.props;
+---
+<button class="article-share-action" type="button" data-story-open data-title={title} data-author={author} data-kind={kind} data-url={url} aria-label="Preparar imagen para compartir en una historia de Instagram">
+  <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.4" cy="6.7" r=".9" fill="currentColor" stroke="none"/></svg>
+  <span>Historia IG</span>
+</button>
+<dialog class="ig-story-dialog" aria-label="Compartir en una historia de Instagram">
+  <header class="ig-story-head">
+    <div><span>La Forja · Compartir</span><h2>Historia de Instagram</h2></div>
+    <button type="button" data-ig-close aria-label="Cerrar">×</button>
+  </header>
+  <div class="ig-story-layout">
+    <div class="ig-story-image">
+      <img data-ig-preview alt="Portada vertical con el título, la firma y el logotipo de La Forja para publicar como historia" hidden />
+      <span data-ig-loading>Preparando imagen…</span>
+    </div>
+    <div class="ig-story-instructions">
+      <p>Preparamos una imagen de <strong>1080 × 1920</strong> con la identidad de La Forja. Desde tu celular, compártela y elige <strong>Instagram → Historia</strong> si esa opción aparece.</p>
+      <p>Si Instagram no aparece en el menú, guarda la imagen y agrégala a una historia desde la aplicación. Puedes usar el <strong>sticker «Enlace»</strong> para dirigir al ensayo completo.</p>
+      <div class="ig-story-options">
+        <button type="button" class="ig-story-send" data-ig-send hidden>Compartir imagen →</button>
+        <a data-ig-download download="la-forja-historia.png" aria-disabled="true">Guardar imagen ↓</a>
+        <button type="button" data-ig-copy>Copiar enlace para sticker</button>
+      </div>
+      <p class="ig-story-status" data-ig-status role="status" aria-live="polite"></p>
+      <small>Instagram no ofrece a los sitios web una función universal para abrir directamente su editor de Historias.</small>
+    </div>
+  </div>
+</dialog>
+<script>
+  async function storyCanvas(title:string,author:string,kind:string):Promise<Blob>{
+    const canvas=document.createElement('canvas');
+    canvas.width=1080;canvas.height=1920;
+    const ctx=canvas.getContext('2d');
+    if(!ctx)throw Error('No hay contexto de dibujo');
+    try{await document.fonts.ready;}catch{}
+    const red='#b22f2a',paper='#e8ddc4',paper2='#d8c8a6',ink='#191816',blue='#31597b';
+    ctx.fillStyle=paper;ctx.fillRect(0,0,1080,1920);
+    ctx.lineWidth=3;ctx.strokeStyle=ink;ctx.strokeRect(46,44,988,1832);
+    ctx.fillStyle=red;ctx.fillRect(48,46,984,228);
+    ctx.fillStyle=paper;ctx.font='102px "Archivo Black", Impact, sans-serif';ctx.fillText('LA FORJA',224,184);
+    ctx.font='bold 25px "Roboto Condensed", Arial, sans-serif';ctx.fillText('REVISTA DE PENSAMIENTO CRÍTICO',231,237);
+    try{
+      const logo=new Image();
+      logo.src=new URL('/branding/lf-mini.svg',window.location.origin).href;
+      await new Promise<void>((resolve,reject)=>{logo.onload=()=>resolve();logo.onerror=()=>reject(Error('logo'));});
+      ctx.drawImage(logo,82,95,114,114);
+    }catch{
+      ctx.fillStyle=paper;ctx.fillRect(83,95,112,112);
+      ctx.fillStyle=red;ctx.font='bold 62px Impact, sans-serif';ctx.fillText('LF',91,173);
+    }
+    ctx.fillStyle=blue;ctx.fillRect(82,324,214,52);
+    ctx.fillStyle=paper;ctx.font='bold 28px "Roboto Condensed", Arial, sans-serif';ctx.fillText(kind.toUpperCase(),101,359);
+    ctx.fillStyle=ink;ctx.font='bold 29px "Roboto Condensed", Arial, sans-serif';ctx.fillText('LA FORJA  /  LECTURAS',325,358);
+    const maxWidth=910;
+    function wrapped(fontSize:number):string[]{
+      ctx.font='bold '+fontSize+'px "Source Serif 4", Georgia, serif';
+      const lines:string[]=[];let current='';
+      for(const word of title.split(/\s+/)){
+        if(!word)continue;
+        const next=current?current+' '+word:word;
+        if(ctx.measureText(next).width>maxWidth&&current){lines.push(current);current=word;}
+        else current=next;
+      }
+      if(current)lines.push(current);
+      return lines;
+    }
+    let size=108,lines=wrapped(size);
+    while((lines.length>8||lines.length*size*1.14>780)&&size>50){size-=3;lines=wrapped(size);}
+    let y=525;
+    ctx.fillStyle=ink;ctx.font='bold '+size+'px "Source Serif 4", Georgia, serif';
+    for(const line of lines){ctx.fillText(line,82,y);y+=size*1.13;}
+    const ruleY=Math.max(1190,Math.min(1420,y+45));
+    ctx.fillStyle=red;ctx.fillRect(82,ruleY,225,10);
+    ctx.fillStyle=ink;ctx.font='bold 44px "Source Serif 4", Georgia, serif';ctx.fillText('Por '+author,82,ruleY+94);
+    ctx.fillStyle=paper2;ctx.fillRect(82,1515,916,156);
+    ctx.fillStyle=blue;ctx.fillRect(82,1515,13,156);
+    ctx.fillStyle=ink;ctx.font='bold 34px "Roboto Condensed", Arial, sans-serif';ctx.fillText('LEE EL TEXTO COMPLETO EN',124,1582);
+    ctx.font='bold 43px "Roboto Condensed", Arial, sans-serif';ctx.fillText('revistalaforja.cl',124,1644);
+    ctx.fillStyle=red;ctx.fillRect(48,1738,984,136);
+    ctx.fillStyle=paper;ctx.font='bold 37px "Roboto Condensed", Arial, sans-serif';ctx.fillText('PENSAR · DISCUTIR · TRANSFORMAR',86,1824);
+    const blob=await new Promise<Blob|null>(resolve=>canvas.toBlob(resolve,'image/png'));
+    if(!blob)throw Error('No se pudo crear PNG');
+    return blob;
+  }
+  function copyLegacy(text:string):boolean{
+    const input=document.createElement('textarea');
+    input.value=text;input.style.position='fixed';input.style.opacity='0';
+    document.body.appendChild(input);input.select();
+    let ok=false;try{ok=document.execCommand('copy');}catch{}
+    input.remove();return ok;
+  }
+  for(const trigger of document.querySelectorAll<HTMLButtonElement>('[data-story-open]')){
+    const dialog=trigger.nextElementSibling;
+    if(!(dialog instanceof HTMLDialogElement))continue;
+    const title=trigger.dataset.title||'La Forja';
+    const author=trigger.dataset.author||'La Forja';
+    const kind=trigger.dataset.kind||'ensayo';
+    const url=trigger.dataset.url||window.location.href;
+    const preview=dialog.querySelector<HTMLImageElement>('[data-ig-preview]');
+    const loading=dialog.querySelector<HTMLElement>('[data-ig-loading]');
+    const status=dialog.querySelector<HTMLElement>('[data-ig-status]');
+    const send=dialog.querySelector<HTMLButtonElement>('[data-ig-send]');
+    const download=dialog.querySelector<HTMLAnchorElement>('[data-ig-download]');
+    const setStatus=(msg:string)=>{if(status)status.textContent=msg;};
+    let imageUrl:string|null=null;let file:File|null=null;
+    trigger.addEventListener('click',async()=>{
+      dialog.showModal();
+      if(file)return;
+      setStatus('');
+      try{
+        const blob=await storyCanvas(title,author,kind);
+        file=new File([blob],'la-forja-historia.png',{type:'image/png'});
+        imageUrl=URL.createObjectURL(blob);
+        if(preview){preview.src=imageUrl;preview.hidden=false;}
+        if(loading)loading.hidden=true;
+        if(download){download.href=imageUrl;download.setAttribute('aria-disabled','false');}
+        if(send&&typeof navigator.share==='function'&&typeof navigator.canShare==='function'&&navigator.canShare({files:[file]})){send.hidden=false;}
+      }catch{
+        if(loading)loading.textContent='No se pudo generar la portada.';
+        setStatus('Prueba con otro navegador o copia el enlace.');
+      }
+    });
+    dialog.querySelector<HTMLButtonElement>('[data-ig-close]')?.addEventListener('click',()=>dialog.close());
+    dialog.addEventListener('click',(e)=>{if(e.target===dialog)dialog.close();});
+    download?.addEventListener('click',(e)=>{if(!imageUrl){e.preventDefault();setStatus('La imagen aún no está lista.');}});
+    dialog.querySelector<HTMLButtonElement>('[data-ig-copy]')?.addEventListener('click',async()=>{
+      let ok=false;
+      if(navigator.clipboard?.writeText){try{await navigator.clipboard.writeText(url);ok=true;}catch{}}
+      if(!ok)ok=copyLegacy(url);
+      setStatus(ok?'Enlace copiado. Pégalo en el sticker «Enlace» de tu historia.':'Copia esta dirección: '+url);
+    });
+    send?.addEventListener('click',async()=>{
+      if(!file)return;
+      try{
+        await navigator.share({files:[file]});
+        setStatus('Elige Instagram → Historia si aparece. Añade el sticker de enlace antes de publicar.');
+      }catch(e){
+        if(!(e instanceof DOMException&&e.name==='AbortError'))setStatus('No se pudo enviar la imagen. Guárdala y añádela desde Instagram.');
+      }
+    });
+  }
+</script>

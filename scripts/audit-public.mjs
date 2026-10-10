@@ -65,7 +65,7 @@ for(const page of htmlFiles){
 for(const page of htmlFiles.filter(p=>(p.startsWith('ensayos/')||p.startsWith('columnas/'))&&p.endsWith('/index.html')&&p.split('/').length===3)){
   const html=load(page);
   assert(html.includes('data-article-share'),'Falta la barra para compartir en '+page);
-  for(const destination of ['facebook.com/sharer/sharer.php','twitter.com/intent/tweet','linkedin.com/sharing/share-offsite/','data-share-copy="instagram"','data-share-copy="link"']){
+  for(const destination of ['facebook.com/sharer/sharer.php','twitter.com/intent/tweet','linkedin.com/sharing/share-offsite/','data-story-open','data-ig-download','data-ig-send','data-share-copy="link"']){
     assert(html.includes(destination),'Falta opción '+destination+' en '+page);
   }
 }
