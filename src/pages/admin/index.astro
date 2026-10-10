@@ -39,6 +39,10 @@ const currentIssue=String(issues[0]?.data.number??1).padStart(3,'0');
     </section>
 
     <section id="admin-app" class="admin-app" hidden>
+      <div class="admin-readership-link">
+        <div><strong>Estadísticas de lectura</strong><span>Ranking mensual, evolución diaria y selección editorial de destacados.</span></div>
+        <a class="text-link" href="/admin/estadisticas/">Ver estadísticas →</a>
+      </div>
       <div class="admin-stats">
         <button data-filter="all" class="active"><span id="count-all">0</span><strong>Todas</strong></button>
         <button data-filter="received"><span id="count-received">0</span><strong>Recibidas</strong></button>
