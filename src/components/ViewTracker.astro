@@ -1,0 +1,46 @@
+---
+interface Props {
+  slug:string;
+  kind:'ensayo'|'columna';
+}
+const {slug,kind}=Astro.props;
+---
+<span data-editorial-view data-slug={slug} data-kind={kind} hidden aria-hidden="true"></span>
+<script>
+  const endpoint='https://jtgoumydocaleucuomaw.supabase.co/rest/v1/editorial_article_views';
+  const apiKey='sb_publishable_jHVTZ5v1aeP82CxMg33r6g_S3C_yG9H';
+  function dayChile():string{
+    return new Intl.DateTimeFormat('sv-SE',{
+      timeZone:'America/Santiago',year:'numeric',month:'2-digit',day:'2-digit'
+    }).format(new Date());
+  }
+  for(const el of document.querySelectorAll<HTMLElement>('[data-editorial-view]')){
+    const slug=el.dataset.slug||'';
+    const kind=el.dataset.kind||'';
+    if(!['revistalaforja.cl','www.revistalaforja.cl'].includes(location.hostname))continue;
+    if(navigator.webdriver||navigator.doNotTrack==='1'||navigator.globalPrivacyControl===true)continue;
+    if(!/^[a-z0-9][a-z0-9-]{4,139}$/.test(slug)||!['columna','ensayo'].includes(kind))continue;
+    const key='laforja_lectura_v1_'+dayChile()+'_'+kind+'_'+slug;
+    try{if(sessionStorage.getItem(key)==='1')continue;}catch{}
+    let inFlight=false;
+    const record=async()=>{
+      if(inFlight||document.visibilityState!=='visible')return;
+      inFlight=true;
+      try{
+        const res=await fetch(endpoint,{
+          method:'POST',
+          headers:{apikey:apiKey,'Content-Type':'application/json','Prefer':'return=minimal'},
+          body:JSON.stringify({article_slug:slug,kind}),
+          credentials:'omit',keepalive:true
+        });
+        if(res.ok){try{sessionStorage.setItem(key,'1');}catch{}}
+        else inFlight=false;
+      }catch{inFlight=false;}
+    };
+    if(document.readyState==='complete')window.setTimeout(record,1800);
+    else window.addEventListener('load',()=>window.setTimeout(record,1800),{once:true});
+    document.addEventListener('visibilitychange',()=>{
+      if(document.visibilityState==='visible'&&!inFlight)window.setTimeout(record,1800);
+    });
+  }
+</script>
