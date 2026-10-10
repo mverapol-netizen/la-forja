@@ -11,13 +11,13 @@ const source=path.resolve(here,'../src/content');
 const base='/';
 const expectedPages=[
  'index.html','educacion-popular/index.html','sobre/index.html',
- 'colabora/index.html','admin/index.html','columnas/index.html',
+ 'colabora/index.html','admin/index.html','admin/estadisticas/index.html','columnas/index.html',
  'ensayos/index.html','archivo/index.html','autores/index.html',
  'temas/index.html','buscar/index.html'
 ];
 const publicPaths=new Set(['','educacion-popular/','sobre/','colabora/']);
 const hiddenPages=['admin/index.html','columnas/index.html','ensayos/index.html',
- 'archivo/index.html','autores/index.html','temas/index.html','buscar/index.html'];
+ 'archivo/index.html','autores/index.html','temas/index.html','buscar/index.html','admin/estadisticas/index.html'];
 const failures=[];
 const assert=(condition,description)=>{if(!condition)failures.push(description)};
 const load=(p)=>fs.readFileSync(path.join(dist,p),'utf8');
@@ -69,6 +69,13 @@ for(const page of htmlFiles.filter(p=>(p.startsWith('ensayos/')||p.startsWith('c
     assert(html.includes(destination),'Falta opción '+destination+' en '+page);
   }
 }
+// Cada artículo publicado debe incluir un contador anónimo, sin afectar las páginas vacías.
+for(const page of htmlFiles.filter(p=>(p.startsWith('ensayos/')||p.startsWith('columnas/'))&&p.endsWith('/index.html')&&p.split('/').length===3)){
+  assert(load(page).includes('data-editorial-view'),'Falta el contador de lecturas en '+page);
+}
+const statsPage=load('admin/estadisticas/index.html');
+assert(statsPage.includes('noindex,nofollow') && statsPage.includes('editorial_monthly_readership') && statsPage.includes('id="metrics-rows"'),
+  'Panel privado de estadísticas incompleto');
 const home=htmlFiles.includes('index.html')?load('index.html'):'';
 assert(home.includes('700 a 1.200') && home.includes('Más de 2.000'),'Faltan rangos editoriales de la convocatoria');
 const education=htmlFiles.includes('educacion-popular/index.html')?load('educacion-popular/index.html'):'';
