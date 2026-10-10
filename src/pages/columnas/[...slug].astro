@@ -1,6 +1,7 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import ShareArticle from '../../components/ShareArticle.astro';
+import ViewTracker from '../../components/ViewTracker.astro';
 import { getCollection, render } from 'astro:content';
 export async function getStaticPaths(){const entries=await getCollection('articulos',({data})=>data.type==='columna'&&!data.draft);return entries.map(post=>({params:{slug:post.id},props:{post}}))}
 const{post}=Astro.props;
@@ -12,4 +13,4 @@ const authorName=author?.data.name??post.data.author;
 const{Content}=await render(post);
 const shareUrl=new URL(base+'columnas/'+post.id+'/',Astro.site).toString();
 ---
-<BaseLayout title={post.data.title} description={post.data.subtitle} active="Columnas" image={post.data.image} type="article" publishedTime={post.data.date} author={authorName}><article class="article"><header><span class="label">Columna</span><h1>{post.data.title}</h1><div class="dek">{post.data.subtitle}</div><div class="byline">Por {authorName} · {post.data.date.toLocaleDateString('es-CL')} {post.data.readingTime&&`· ${post.data.readingTime} min`}</div><ShareArticle title={post.data.title} url={shareUrl} author={authorName} kind="columna" compact /></header><section class="article-body"><div class="prose"><Content/></div><aside class="pull">Intervenir en la coyuntura también exige construir argumentos.</aside></section><section class="article-topics"><strong>Temas</strong>{post.data.topics.map(t=><a href={base+'temas/'+slugify(t)+'/' }>{t}</a>)}</section><ShareArticle title={post.data.title} url={shareUrl} author={authorName} kind="columna" /></article></BaseLayout>
+<BaseLayout title={post.data.title} description={post.data.subtitle} active="Columnas" image={post.data.image} type="article" publishedTime={post.data.date} author={authorName}><article class="article"><header><span class="label">Columna</span><h1>{post.data.title}</h1><div class="dek">{post.data.subtitle}</div><div class="byline">Por {authorName} · {post.data.date.toLocaleDateString('es-CL')} {post.data.readingTime&&`· ${post.data.readingTime} min`}</div><ShareArticle title={post.data.title} url={shareUrl} author={authorName} kind="columna" compact /></header><section class="article-body"><div class="prose"><Content/></div><aside class="pull">Intervenir en la coyuntura también exige construir argumentos.</aside></section><section class="article-topics"><strong>Temas</strong>{post.data.topics.map(t=><a href={base+'temas/'+slugify(t)+'/' }>{t}</a>)}</section><ShareArticle title={post.data.title} url={shareUrl} author={authorName} kind="columna" /></article><ViewTracker slug={post.id} kind="columna" /></BaseLayout>
