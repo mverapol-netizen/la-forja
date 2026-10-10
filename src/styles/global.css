@@ -454,3 +454,11 @@ footer a{border-bottom:1px solid transparent}footer a:hover{border-color:var(--r
 .ig-story-status:empty{display:none}
 .ig-story-dialog button:focus-visible,.ig-story-dialog a:focus-visible{outline:3px solid var(--blue);outline-offset:3px}
 @media(max-width:650px){.ig-story-dialog{max-width:calc(100vw - 12px)}.ig-story-head{padding:14px}.ig-story-head h2{font-size:22px}.ig-story-layout{grid-template-columns:1fr;padding:14px;gap:15px}.ig-story-image{max-width:240px;margin:auto}.ig-story-instructions p{font-size:15px}}
+
+/* Acceso al módulo de análisis desde la redacción */
+.admin-readership-link{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:17px 20px;margin:22px 0 2px;border-left:6px solid var(--red);background:rgba(49,89,123,.075)}
+.admin-readership-link div{display:grid;gap:5px}
+.admin-readership-link strong{font:700 25px/1.15 var(--serif)}
+.admin-readership-link span{font:600 15px/1.25 var(--serif);color:var(--ink-soft)}
+.admin-readership-link .text-link{white-space:nowrap}
+@media(max-width:650px){.admin-readership-link{display:block;padding:14px}.admin-readership-link .text-link{display:inline-block;margin-top:13px}}
