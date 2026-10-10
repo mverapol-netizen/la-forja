@@ -1,6 +1,7 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import EditorialArt from '../../components/EditorialArt.astro';
+import ShareArticle from '../../components/ShareArticle.astro';
 import { getCollection, render } from 'astro:content';
 export async function getStaticPaths(){const entries=await getCollection('articulos',({data})=>data.type==='ensayo'&&!data.draft);return entries.map(post=>({params:{slug:post.id},props:{post}}))}
 const{post}=Astro.props;
@@ -10,7 +11,8 @@ const autores=await getCollection('autores',({data})=>!data.draft);
 const author=autores.find(a=>a.id===post.data.author);
 const authorName=author?.data.name??post.data.author;
 const{Content}=await render(post);
+const shareUrl=new URL(base+'ensayos/'+post.id+'/',Astro.site).toString();
 ---
 <BaseLayout title={post.data.title} description={post.data.subtitle} active="Ensayos" image={post.data.image} type="article" publishedTime={post.data.date} author={authorName}>
-  <article class="article"><header><span class="label blue">Ensayo</span><h1>{post.data.title}</h1><div class="dek">{post.data.subtitle}</div><div class="byline">Por {authorName} · {post.data.date.toLocaleDateString('es-CL')} {post.data.readingTime&&`· ${post.data.readingTime} min`}</div></header><EditorialArt style={post.data.artStyle} label={post.data.artLabel} alt={post.data.title} image={post.data.image} imageAlt={post.data.imageAlt} imageTreatment={post.data.imageTreatment}/>{post.data.imageCredit&&<div class="image-credit">{post.data.imageCredit}</div>}<section class="article-body"><div class="prose"><Content/></div>{post.data.pullQuote&&<aside class="pull">{post.data.pullQuote}</aside>}</section><section class="article-topics"><strong>Temas</strong>{post.data.topics.map(t=><a href={base+'temas/'+slugify(t)+'/' }>{t}</a>)}</section></article>
+  <article class="article"><header><span class="label blue">Ensayo</span><h1>{post.data.title}</h1><div class="dek">{post.data.subtitle}</div><div class="byline">Por {authorName} · {post.data.date.toLocaleDateString('es-CL')} {post.data.readingTime&&`· ${post.data.readingTime} min`}</div><ShareArticle title={post.data.title} url={shareUrl} compact /></header><EditorialArt style={post.data.artStyle} label={post.data.artLabel} alt={post.data.title} image={post.data.image} imageAlt={post.data.imageAlt} imageTreatment={post.data.imageTreatment}/>{post.data.imageCredit&&<div class="image-credit">{post.data.imageCredit}</div>}<section class="article-body"><div class="prose"><Content/></div>{post.data.pullQuote&&<aside class="pull">{post.data.pullQuote}</aside>}</section><section class="article-topics"><strong>Temas</strong>{post.data.topics.map(t=><a href={base+'temas/'+slugify(t)+'/' }>{t}</a>)}</section><ShareArticle title={post.data.title} url={shareUrl} /></article>
 </BaseLayout>

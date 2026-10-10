@@ -407,3 +407,25 @@ footer a{border-bottom:1px solid transparent}footer a:hover{border-color:var(--r
 .submission-reference-note strong{font:700 13px var(--sans);text-transform:uppercase;color:var(--blue)}
 @media(max-width:900px){.submission-types article{min-height:200px}}
 @media(max-width:560px){.submission-types article{min-height:0}}
+
+
+/* Compartir publicaciones · tinta, papel y filetes de La Forja */
+.article-share{padding:18px 0 27px;border-top:2px solid var(--red);margin:0 0 34px}
+.article-share-compact{border-top:1px solid var(--rule);margin:20px 0 0;padding:11px 0 0}
+.article-share-heading{display:block;margin-bottom:10px;font:700 13px/1.2 var(--sans);text-transform:uppercase;letter-spacing:.055em;color:var(--blue)}
+.article-share-compact .article-share-heading{font-size:11px;margin-bottom:8px}
+.article-share-actions{display:flex;flex-wrap:wrap;align-items:stretch;gap:7px}
+.article-share-action{appearance:none;display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:38px;padding:8px 10px;border:1px solid var(--rule);border-radius:0;background:transparent;color:var(--ink);font:700 12px/1.1 var(--sans);text-transform:uppercase;letter-spacing:.015em;cursor:pointer;transition:background .15s ease,color .15s ease,border-color .15s ease}
+.article-share-compact .article-share-action{min-height:34px;padding:6px 9px;font-size:11px}
+.article-share-action svg{width:17px;height:17px;flex:none}
+.article-share-action:hover{background:var(--red);border-color:var(--red);color:var(--paper)}
+.article-share-action:focus-visible{outline:3px solid var(--blue);outline-offset:3px}
+.article-share-action[hidden]{display:none!important}
+.article-share-feedback{max-width:740px;margin:10px 0 0;font:600 13px/1.35 var(--serif);color:var(--blue)}
+.article-share-feedback[hidden]{display:none}
+@media(max-width:560px){
+  .article-share-actions{gap:6px}
+  .article-share-action,.article-share-compact .article-share-action{padding:9px 10px;font-size:11px;min-height:40px}
+  .article-share{margin-bottom:24px}
+}
+@media(prefers-reduced-motion:reduce){.article-share-action{transition:none}}
