@@ -14,7 +14,7 @@ const editorialState={draft:z.boolean().default(false)};
 const articulos=defineCollection({loader:glob({pattern:'**/*.md',base:'./src/content/articulos'}),schema:z.object({
   ...editorialState,title:z.string(),subtitle:z.string().optional(),author:z.string(),type:z.enum(['columna','ensayo','editorial']),
   date:z.coerce.date(),issue:z.string(),topics:z.array(z.string()).default([]),featured:z.boolean().default(false),
-  readingTime:z.number().optional(),artStyle,artLabel:z.string().optional(),...imageFields
+  readingTime:z.number().optional(),artStyle,artLabel:z.string().optional(),pullQuote:z.string().optional(),...imageFields
 })});
 const autores=defineCollection({loader:glob({pattern:'**/*.md',base:'./src/content/autores'}),schema:z.object({
   ...editorialState,name:z.string(),bio:z.string(),location:z.string().optional()

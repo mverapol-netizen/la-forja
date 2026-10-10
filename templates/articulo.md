@@ -11,6 +11,7 @@ featured: false
 readingTime: 10
 artStyle: "constructivist"
 artLabel: "Palabra · palabra"
+# pullQuote: "Una frase destacada del texto (opcional)."
 # image: "/images/articulos/archivo.webp"
 # imageAlt: "Descripción de la imagen para accesibilidad."
 # imageCredit: "Autor o fuente de la imagen."

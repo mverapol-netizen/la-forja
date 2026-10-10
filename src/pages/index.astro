@@ -9,6 +9,7 @@ const autores=await getCollection('autores',({data})=>!data.draft);
 const authorName=(id)=>autores.find(a=>a.id===id)?.data.name??id;
 const featured=articulos.find(a=>a.data.featured)??articulos[0];
 const columnas=articulos.filter(a=>a.data.type==='columna').sort((a,b)=>b.data.date.valueOf()-a.data.date.valueOf()).slice(0,3);
+const ensayos=articulos.filter(a=>a.data.type==='ensayo').sort((a,b)=>b.data.date.valueOf()-a.data.date.valueOf()).slice(0,3);
 const cuadernos=(await getCollection('cuadernos',({data})=>!data.draft)).sort((a,b)=>a.data.number-b.data.number).slice(0,4);
 const hrefFor=(a)=>base+(a.data.type==='ensayo'?'ensayos/':'columnas/')+a.id+'/';
 ---
@@ -88,6 +89,8 @@ const hrefFor=(a)=>base+(a.data.type==='ensayo'?'ensayos/':'columnas/')+a.id+'/'
   <section class="grid3">
     {columnas.length ? (
       <article class="card"><span class="label">Columnas</span><div class="card-list">{columnas.map(c=><a href={hrefFor(c)}><strong>{c.data.title}</strong><br/><small>Por {authorName(c.data.author)}</small></a>)}</div></article>
+    ) : ensayos.length ? (
+      <article class="card"><span class="label">Ensayos</span><div class="card-list">{ensayos.map(e=><a href={hrefFor(e)}><strong>{e.data.title}</strong><br/><small>Por {authorName(e.data.author)}</small></a>)}</div></article>
     ) : (
       <article class="card"><span class="label">En preparación</span><h2>La primera edición</h2><p>Reuniremos columnas y ensayos sobre problemas políticos, económicos, sociales y culturales de nuestro tiempo.</p></article>
     )}
