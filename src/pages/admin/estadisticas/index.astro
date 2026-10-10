@@ -14,7 +14,7 @@ const catalog=articles.filter(a=>['ensayo','columna'].includes(a.data.type)).map
 }));
 ---
 <BaseLayout title="Estadísticas editoriales" noindex>
-  <main class="metrics-shell">
+  <section class="metrics-shell">
     <header class="metrics-head">
       <div>
         <span class="label blue">Uso interno · Redacción</span>
@@ -74,7 +74,7 @@ const catalog=articles.filter(a=>['ensayo','columna'].includes(a.data.type)).map
       </div>
       <p class="metrics-footnote">Los primeros puestos son candidatos para revisión editorial, no una selección automática. El equipo decide los destacados y los publica mediante la configuración editorial de cada artículo.</p>
     </section>
-  </main>
+  </section>
 
   <script define:vars={{supabaseUrl,supabaseKey,catalog}}>
     const STORE='laforja_editorial_session_v1';
